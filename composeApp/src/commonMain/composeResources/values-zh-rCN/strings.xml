@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Tomato</string>
+    <string name="create_tomato_clock">创建一个番茄</string>
+    <string name="settings">设置</string>
+    <string name="save">保存</string>
+    <string name="current_timer">当前定时 %1$d 分钟</string>
+    <string name="timer_duration">定时时长</string>
+    <string name="discard_tomato">放弃番茄</string>
+    <string name="discard_tomato_message">您正在一个番茄时钟中，要放弃这个番茄吗？</string>
+    <string name="discard">放弃</string>
+    <string name="cancel">取消</string>
+</resources>

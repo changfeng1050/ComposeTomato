@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Tomato</string>
+    <string name="create_tomato_clock">Create a tomato</string>
+    <string name="settings">Settings</string>
+    <string name="save">Save</string>
+    <string name="current_timer">Current timer %1$s minutes</string>
+    <string name="timer_duration">Timer duration</string>
+    <string name="discard_tomato">Discard tomato</string>
+    <string name="discard_tomato_message">You are in a tomato clock, do you want to discard this tomato?</string>
+    <string name="discard">Discard</string>
+    <string name="cancel">Cancel</string>
+</resources>
