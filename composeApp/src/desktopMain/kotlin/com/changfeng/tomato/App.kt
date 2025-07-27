@@ -1,6 +1,7 @@
 package com.changfeng.tomato
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.PointerMatcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -31,9 +32,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.PointerButton
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.changfeng.tomato.resources.Res
@@ -57,7 +60,7 @@ import java.text.SimpleDateFormat
 private const val SettingsFile = "settings.json"
 
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 @Preview
 fun App() {
@@ -100,6 +103,9 @@ fun App() {
             }
         } else {
             Tomato(
+                dismissRequest = {
+                    home = true
+                },
                 countdown = countdown
             )
         }
@@ -191,6 +197,7 @@ private fun ConfirmDiscardDialog(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Tomato(
+    dismissRequest: () -> Unit,
     countdown: Int = 25 * 60,
     modifier: Modifier = Modifier
 ) {
@@ -215,10 +222,6 @@ private fun Tomato(
         Box(
             modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary).onClick {
                 when (state) {
-                    State.None -> {
-                        // 这个位置不会出现这个状态
-                    }
-
                     State.NotStarted -> {
                         state = State.Running
                     }
@@ -230,6 +233,12 @@ private fun Tomato(
                     State.Finished -> {
                         state = State.Running
                     }
+                }
+            }.onClick(matcher = PointerMatcher.mouse(PointerButton.Secondary)) {
+                if (state == State.Running) {
+                    showDiscard = true
+                } else {
+                    dismissRequest()
                 }
             },
             contentAlignment = Alignment.Center
@@ -244,10 +253,6 @@ private fun Tomato(
                 gapSize = 0.dp
             )
             when (state) {
-                State.None -> {
-                    // 这个位置不会出现这个状态
-                }
-
                 State.NotStarted -> {
                     Icon(
                         Icons.Sharp.PlayArrow,
@@ -323,7 +328,6 @@ private fun saveCountdown(countdown: Int) {
 
 
 enum class State {
-    None,
     NotStarted,
     Running,
     Finished
