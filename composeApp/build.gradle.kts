@@ -14,15 +14,23 @@ kotlin {
         val desktopMain by getting
 
         commonMain.dependencies {
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.runtime)
-            implementation(compose.ui)
+            // androidx.compose
+            implementation(libs.androidx.compose.components.resources)
+            implementation(libs.androidx.compose.foundation)
+            implementation(libs.androidx.compose.material3)
+            implementation(libs.androidx.compose.material.icons.extended)
+            implementation(libs.androidx.compose.runtime)
+            implementation(libs.androidx.compose.ui)
+            implementation(libs.androidx.compose.ui.tooling.preview)
+
+            // androidx.lifecycle
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+
+            // androidx.navigation3
+            implementation(libs.androidx.navigation3.ui)
+
+            // kotlinx.serialization
             implementation(libs.kotlinx.serialization.json)
         }
         desktopMain.dependencies {

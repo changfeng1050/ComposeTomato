@@ -2,6 +2,7 @@
     <string name="app_name">Tomato</string>
     <string name="create_tomato_clock">创建一个番茄</string>
     <string name="settings">设置</string>
+    <string name="notes">便笺</string>
     <string name="save">保存</string>
     <string name="current_timer">当前定时 %1$d 分钟</string>
     <string name="timer_duration">定时时长</string>

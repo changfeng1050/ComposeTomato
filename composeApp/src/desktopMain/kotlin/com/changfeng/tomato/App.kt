@@ -1,5 +1,6 @@
 package com.changfeng.tomato
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.PointerMatcher
 import androidx.compose.foundation.background
@@ -13,32 +14,44 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.onClick
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Note
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.sharp.Done
 import androidx.compose.material.icons.sharp.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.NavDisplay
 import com.changfeng.tomato.resources.Res
 import com.changfeng.tomato.resources.cancel
 import com.changfeng.tomato.resources.create_tomato_clock
@@ -47,23 +60,30 @@ import com.changfeng.tomato.resources.discard
 import com.changfeng.tomato.resources.discard_tomato
 import com.changfeng.tomato.resources.discard_tomato_message
 import com.changfeng.tomato.resources.save
-import com.changfeng.tomato.resources.settings
 import com.changfeng.tomato.resources.timer_duration
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import java.io.File
 import java.text.SimpleDateFormat
 
 private const val SettingsFile = "settings.json"
+private const val NotesFile = "notes.json"
 
+private data object RouteHome
+private data object RouteSettings
+private data object RouteTomato
+private data object RouteNotes
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 @Preview
-fun App() {
+fun App(
+    isNotesInSeparateWindow: Boolean = false,
+    onOpenNotesInWindow: () -> Unit = {},
+) {
+    val currentIsNotesInSeparateWindow by rememberUpdatedState(isNotesInSeparateWindow)
     var countdown by remember { mutableStateOf(25 * 60) }
     LaunchedEffect(Unit) {
         countdown = readCountdown() * 60
@@ -75,46 +95,70 @@ fun App() {
             onPrimary = Color.White
         ),
     ) {
-        var showSettings by remember { mutableStateOf(false) }
+        val backStack = remember { mutableStateListOf<Any>(RouteHome) }
 
-        var home by remember { mutableStateOf(true) }
-
-        if (home) {
-            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.secondary) {
-                Home(onStart = {
-                    home = false
-                }, showSettings = {
-                    showSettings = true
-                })
-            }
-
-            if (showSettings) {
-                SetCountdownDialog(
-                    (countdown / 60).coerceAtLeast(1),
-                    onDismissRequest = {
-                        showSettings = false
-                    },
-                    onConfirm = {
-                        countdown = it * 60
-                        saveCountdown(it)
-                        showSettings = false
+        NavDisplay(
+            backStack = backStack,
+        ) { key ->
+            when (key) {
+                is RouteHome -> NavEntry(key) {
+                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.secondary) {
+                        Home(
+                            isNotesInSeparateWindow = currentIsNotesInSeparateWindow,
+                            showSettings = {
+                                backStack.add(RouteSettings)
+                            },
+                            showNotes = {
+                                backStack.add(RouteNotes)
+                            },
+                            onStart = {
+                                backStack.add(RouteTomato)
+                            },
+                        )
                     }
-                )
+                }
+
+                is RouteSettings -> NavEntry(key) {
+                    SetCountdownDialog(
+                        (countdown / 60).coerceAtLeast(1),
+                        onDismissRequest = backStack::removeLastOrNull,
+                        onConfirm = {
+                            countdown = it * 60
+                            saveCountdown(it)
+                            backStack.removeLastOrNull()
+                        }
+                    )
+                }
+
+                is RouteTomato -> NavEntry(key) {
+                    Tomato(
+                        onDismissRequest = backStack::removeLastOrNull,
+                        countdown = countdown
+                    )
+                }
+
+                is RouteNotes -> NavEntry(key) {
+                    Notes(
+                        isInSeparateWindow = false,
+                        onDismissRequest = backStack::removeLastOrNull,
+                        onOpenInSeparateWindow = {
+                            onOpenNotesInWindow()
+                            backStack.removeLastOrNull()
+                        }
+                    )
+                }
+
+                else -> error("Unknown route: $key")
             }
-        } else {
-            Tomato(
-                dismissRequest = {
-                    home = true
-                },
-                countdown = countdown
-            )
         }
     }
 }
 
 @Composable
 fun Home(
+    isNotesInSeparateWindow: Boolean,
     showSettings: () -> Unit,
+    showNotes: () -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -125,10 +169,24 @@ fun Home(
                 modifier = Modifier.clickable(onClick = onStart).padding(4.dp)
             )
         }
-        Text(
-            stringResource(Res.string.settings),
-            modifier = Modifier.clickable(onClick = showSettings).padding(4.dp)
-        )
+
+        Row {
+            if (!isNotesInSeparateWindow) {
+                Icon(
+                    Icons.AutoMirrored.Default.Note,
+                    contentDescription = "Notes",
+                    tint = Color.Gray,
+                    modifier = Modifier.clickable(onClick = showNotes).rotate(-90f)
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = Color.Gray,
+                modifier = Modifier.clickable(onClick = showSettings)
+            )
+        }
     }
 }
 
@@ -197,7 +255,7 @@ private fun ConfirmDiscardDialog(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Tomato(
-    dismissRequest: () -> Unit,
+    onDismissRequest: () -> Unit,
     countdown: Int = 25 * 60,
     modifier: Modifier = Modifier
 ) {
@@ -238,7 +296,7 @@ private fun Tomato(
                 if (state == State.Running) {
                     showDiscard = true
                 } else {
-                    dismissRequest()
+                    onDismissRequest()
                 }
             },
             contentAlignment = Alignment.Center
@@ -292,9 +350,64 @@ private fun Tomato(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@Composable
+fun Notes(
+    isInSeparateWindow: Boolean,
+    onDismissRequest: () -> Unit,
+    onOpenInSeparateWindow: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showClose by remember { mutableStateOf(false) }
+    Box(modifier.fillMaxSize().onPointerEvent(PointerEventType.Enter) {
+        showClose = true
+    }.onPointerEvent(PointerEventType.Exit) {
+        showClose = false
+    }
+    ) {
+        var notes by remember { mutableStateOf(readNotes()) }
+        TextField(
+            value = notes.text,
+            onValueChange = {
+                notes = notes.copy(text = it)
+                saveNotes(it)
+            },
+            colors = TextFieldDefaults.colors(
+                errorIndicatorColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxSize()
+        )
+        if (!isInSeparateWindow) {
+            AnimatedVisibility(showClose, modifier = Modifier.align(Alignment.TopEnd)) {
+                Row {
+                    Icon(
+                        Icons.AutoMirrored.Filled.OpenInNew,
+                        modifier = Modifier.padding(4.dp).clickable(onClick = onOpenInSeparateWindow),
+                        contentDescription = "Open in separate window"
+                    )
+                    Icon(
+                        Icons.Default.Clear,
+                        modifier = Modifier.padding(4.dp).clickable(onClick = onDismissRequest),
+                        contentDescription = "Delete"
+                    )
+                }
+            }
+        }
+    }
+}
+
+
 @Serializable
 private data class Settings(
     val countdown: Int = 25,
+)
+
+@Serializable
+private data class Notes(
+    val text: String = "",
 )
 
 private val json = Json {
@@ -326,6 +439,24 @@ private fun saveCountdown(countdown: Int) {
     file.writeText(json.encodeToString(Settings(countdown)))
 }
 
+private fun readNotes(): Notes {
+    val file = File(NotesFile)
+    if (!file.exists()) {
+        return Notes("")
+    }
+    val content = file.readText()
+    return try {
+        json.decodeFromString<Notes>(content)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Notes("")
+    }
+}
+
+private fun saveNotes(notes: String) {
+    val file = File(NotesFile)
+    file.writeText(json.encodeToString(Notes(notes)))
+}
 
 enum class State {
     NotStarted,

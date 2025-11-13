@@ -2,6 +2,7 @@
     <string name="app_name">Tomato</string>
     <string name="create_tomato_clock">Create a tomato</string>
     <string name="settings">Settings</string>
+    <string name="notes">Notes</string>
     <string name="save">Save</string>
     <string name="current_timer">Current timer %1$s minutes</string>
     <string name="timer_duration">Timer duration</string>
